@@ -192,7 +192,7 @@ GO
 **Triasa Munshi**  
 Software Engineer | Azure & Data Engineering Enthusiast  
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-triasa--munshi-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/triasa-munshi/)  
-[![GitHub](https://img.shields.io/badge/GitHub-triasa5-black?style=flat&logo=github)](https://github.com/triasa5)
+[![GitHub](https://img.shields.io/badge/GitHub-triasa--munshi-black?style=flat&logo=github)](https://github.com/triasa5)
 
 ---
 
