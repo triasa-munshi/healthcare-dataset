@@ -1,0 +1,615 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": "Data Factory name",
+            "defaultValue": "adf-healthcare-reporting"
+        },
+        "ls_adls_healthcare_reporting_dl_accountKey": {
+            "type": "secureString",
+            "metadata": "Secure string for 'accountKey' of 'ls_adls_healthcare_reporting_dl'"
+        },
+        "ls_sql_healthcare_db_password": {
+            "type": "secureString",
+            "metadata": "Secure string for 'password' of 'ls_sql_healthcare_db'"
+        },
+        "ls_adls_healthcare_reporting_dl_properties_typeProperties_url": {
+            "type": "string",
+            "defaultValue": "https://dlhealthcarereporting.dfs.core.windows.net/"
+        },
+        "ls_http_healthcare_reporting_properties_typeProperties_url": {
+            "type": "string",
+            "defaultValue": "https://raw.githubusercontent.com/"
+        },
+        "ls_sql_healthcare_db_properties_typeProperties_server": {
+            "type": "string",
+            "defaultValue": "healthcare-reporting-srv.database.windows.net"
+        },
+        "ls_sql_healthcare_db_properties_typeProperties_database": {
+            "type": "string",
+            "defaultValue": "healthcare-db"
+        },
+        "ls_sql_healthcare_db_properties_typeProperties_userName": {
+            "type": "string",
+            "defaultValue": "triasamunshi"
+        }
+    },
+    "variables": {
+        "factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/ls_adls_healthcare_reporting_dl')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureBlobFS",
+                "typeProperties": {
+                    "url": "[parameters('ls_adls_healthcare_reporting_dl_properties_typeProperties_url')]",
+                    "accountKey": {
+                        "type": "SecureString",
+                        "value": "[parameters('ls_adls_healthcare_reporting_dl_accountKey')]"
+                    }
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ls_http_healthcare_reporting')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "HttpServer",
+                "typeProperties": {
+                    "url": "[parameters('ls_http_healthcare_reporting_properties_typeProperties_url')]",
+                    "enableServerCertificateValidation": true,
+                    "authenticationType": "Anonymous"
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ls_sql_healthcare_db')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureSqlDatabase",
+                "typeProperties": {
+                    "server": "[parameters('ls_sql_healthcare_db_properties_typeProperties_server')]",
+                    "database": "[parameters('ls_sql_healthcare_db_properties_typeProperties_database')]",
+                    "encrypt": "mandatory",
+                    "trustServerCertificate": false,
+                    "authenticationType": "SQL",
+                    "userName": "[parameters('ls_sql_healthcare_db_properties_typeProperties_userName')]",
+                    "password": {
+                        "type": "SecureString",
+                        "value": "[parameters('ls_sql_healthcare_db_password')]"
+                    }
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_patients_record_raw_csv_dl')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_adls_healthcare_reporting_dl",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileName": "patients_record.csv",
+                        "folderPath": "patients_record",
+                        "fileSystem": "raw"
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_adls_healthcare_reporting_dl')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_patient_record_raw_csv_http')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_http_healthcare_reporting",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "HttpServerLocation",
+                        "relativeUrl": "triasa-munshi/healthcare-dataset/refs/heads/main/Patients_record.csv"
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_http_healthcare_reporting')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_processed_healthcare')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_adls_healthcare_reporting_dl",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": "healthcare/processed_healthcare",
+                        "fileSystem": "processed"
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_adls_healthcare_reporting_dl')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_raw_patients_record')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_adls_healthcare_reporting_dl",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "DelimitedText",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileName": "patients_record.csv",
+                        "folderPath": "patients_record",
+                        "fileSystem": "raw"
+                    },
+                    "columnDelimiter": ",",
+                    "escapeChar": "\\",
+                    "firstRowAsHeader": true,
+                    "quoteChar": "\""
+                },
+                "schema": [
+                    {
+                        "name": "recordId",
+                        "type": "String"
+                    },
+                    {
+                        "name": "country",
+                        "type": "String"
+                    },
+                    {
+                        "name": "territory_code",
+                        "type": "String"
+                    },
+                    {
+                        "name": "ingestion_timestamp",
+                        "type": "String"
+                    },
+                    {
+                        "name": "mainland",
+                        "type": "String"
+                    },
+                    {
+                        "name": "population_count",
+                        "type": "String"
+                    },
+                    {
+                        "name": "batch_id",
+                        "type": "String"
+                    },
+                    {
+                        "name": "is_valid_record",
+                        "type": "String"
+                    },
+                    {
+                        "name": "mark",
+                        "type": "String"
+                    },
+                    {
+                        "name": "regular_count",
+                        "type": "String"
+                    },
+                    {
+                        "name": "date",
+                        "type": "String"
+                    },
+                    {
+                        "name": "amount_10_day",
+                        "type": "String"
+                    },
+                    {
+                        "name": "test_units",
+                        "type": "String"
+                    },
+                    {
+                        "name": "origin",
+                        "type": "String"
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_adls_healthcare_reporting_dl')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_sql_healthcare')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_sql_healthcare_db",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [],
+                "type": "AzureSqlTable",
+                "schema": [
+                    {
+                        "name": "recordId",
+                        "type": "varchar"
+                    },
+                    {
+                        "name": "country",
+                        "type": "varchar"
+                    },
+                    {
+                        "name": "territory_code",
+                        "type": "varchar"
+                    },
+                    {
+                        "name": "population_count",
+                        "type": "bigint",
+                        "precision": 19
+                    },
+                    {
+                        "name": "batch_id",
+                        "type": "varchar"
+                    },
+                    {
+                        "name": "is_valid_record",
+                        "type": "bit"
+                    },
+                    {
+                        "name": "mark",
+                        "type": "varchar"
+                    },
+                    {
+                        "name": "regular_count",
+                        "type": "int",
+                        "precision": 10
+                    },
+                    {
+                        "name": "origin",
+                        "type": "varchar"
+                    },
+                    {
+                        "name": "units",
+                        "type": "varchar"
+                    }
+                ],
+                "typeProperties": {
+                    "schema": "healthcare_reporting",
+                    "table": "patients_record"
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_sql_healthcare_db')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/df_transform_patients_record')]",
+            "type": "Microsoft.DataFactory/factories/dataflows",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "type": "MappingDataFlow",
+                "typeProperties": {
+                    "sources": [
+                        {
+                            "dataset": {
+                                "referenceName": "ds_raw_patients_record",
+                                "type": "DatasetReference"
+                            },
+                            "name": "PatientsRecordSource"
+                        }
+                    ],
+                    "sinks": [
+                        {
+                            "dataset": {
+                                "referenceName": "ds_processed_healthcare",
+                                "type": "DatasetReference"
+                            },
+                            "name": "PatientsSink"
+                        }
+                    ],
+                    "transformations": [
+                        {
+                            "name": "FilterEuropeOnly"
+                        },
+                        {
+                            "name": "SelectOnlyRequiredFields"
+                        }
+                    ],
+                    "scriptLines": [
+                        "source(output(",
+                        "          recordId as string,",
+                        "          country as string,",
+                        "          territory_code as string,",
+                        "          ingestion_timestamp as string,",
+                        "          mainland as string,",
+                        "          population_count as string,",
+                        "          batch_id as string,",
+                        "          is_valid_record as string,",
+                        "          mark as string,",
+                        "          regular_count as string,",
+                        "          date as string,",
+                        "          amount_10_day as string,",
+                        "          test_units as string,",
+                        "          origin as string",
+                        "     ),",
+                        "     allowSchemaDrift: true,",
+                        "     validateSchema: false,",
+                        "     ignoreNoFilesFound: false) ~> PatientsRecordSource",
+                        "PatientsRecordSource filter(mainland == 'Europe' && not(isNull(territory_code))) ~> FilterEuropeOnly",
+                        "FilterEuropeOnly select(mapColumn(",
+                        "          recordId,",
+                        "          country,",
+                        "          territory_code,",
+                        "          population_count,",
+                        "          batch_id,",
+                        "          is_valid_record,",
+                        "          mark,",
+                        "          regular_count,",
+                        "          origin,",
+                        "          each(match(name=='test_units'),",
+                        "               'units' = $$)",
+                        "     ),",
+                        "     skipDuplicateMapInputs: true,",
+                        "     skipDuplicateMapOutputs: true) ~> SelectOnlyRequiredFields",
+                        "SelectOnlyRequiredFields sink(allowSchemaDrift: true,",
+                        "     validateSchema: false,",
+                        "     truncate: true,",
+                        "     umask: 0022,",
+                        "     preCommands: [],",
+                        "     postCommands: [],",
+                        "     skipDuplicateMapInputs: true,",
+                        "     skipDuplicateMapOutputs: true) ~> PatientsSink"
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/ds_raw_patients_record')]",
+                "[concat(variables('factoryId'), '/datasets/ds_processed_healthcare')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/pl_ingest_patients_record_data')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "Copy Patients Record Data",
+                        "type": "Copy",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "DelimitedTextSource",
+                                "storeSettings": {
+                                    "type": "HttpReadSettings",
+                                    "requestMethod": "GET"
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextReadSettings"
+                                }
+                            },
+                            "sink": {
+                                "type": "DelimitedTextSink",
+                                "storeSettings": {
+                                    "type": "AzureBlobFSWriteSettings"
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextWriteSettings",
+                                    "quoteAllText": true,
+                                    "fileExtension": ".txt"
+                                }
+                            },
+                            "enableStaging": false,
+                            "translator": {
+                                "type": "TabularTranslator",
+                                "typeConversion": true,
+                                "typeConversionSettings": {
+                                    "allowDataTruncation": true,
+                                    "treatBooleanAsNumber": false
+                                }
+                            }
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "ds_patient_record_raw_csv_http",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "ds_patients_record_raw_csv_dl",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ]
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "annotations": [],
+                "lastPublishTime": "2026-05-03T18:04:46Z"
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/ds_patient_record_raw_csv_http')]",
+                "[concat(variables('factoryId'), '/datasets/ds_patients_record_raw_csv_dl')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/pl_sqlize_healthcare_data')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "Copy Healthcare Data",
+                        "type": "Copy",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "DelimitedTextSource",
+                                "storeSettings": {
+                                    "type": "AzureBlobFSReadSettings",
+                                    "recursive": true,
+                                    "wildcardFileName": "*",
+                                    "enablePartitionDiscovery": false
+                                },
+                                "formatSettings": {
+                                    "type": "DelimitedTextReadSettings"
+                                }
+                            },
+                            "sink": {
+                                "type": "AzureSqlSink",
+                                "preCopyScript": "TRUNCATE TABLE healthcare_reporting.patients_record;\n",
+                                "writeBehavior": "insert",
+                                "sqlWriterUseTableLock": false,
+                                "disableMetricsCollection": false
+                            },
+                            "enableStaging": false,
+                            "translator": {
+                                "type": "TabularTranslator",
+                                "typeConversion": true,
+                                "typeConversionSettings": {
+                                    "allowDataTruncation": true,
+                                    "treatBooleanAsNumber": false
+                                }
+                            }
+                        },
+                        "inputs": [
+                            {
+                                "referenceName": "ds_processed_healthcare",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ],
+                        "outputs": [
+                            {
+                                "referenceName": "ds_sql_healthcare",
+                                "type": "DatasetReference",
+                                "parameters": {}
+                            }
+                        ]
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "annotations": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/datasets/ds_processed_healthcare')]",
+                "[concat(variables('factoryId'), '/datasets/ds_sql_healthcare')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/pl_healthcare_data')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "df_transform_patients_record",
+                        "type": "ExecuteDataFlow",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "dataflow": {
+                                "referenceName": "df_transform_patients_record",
+                                "type": "DataFlowReference",
+                                "parameters": {},
+                                "datasetParameters": {
+                                    "PatientsRecordSource": {},
+                                    "PatientsSink": {}
+                                }
+                            },
+                            "staging": {},
+                            "compute": {
+                                "coreCount": 8,
+                                "computeType": "General"
+                            },
+                            "traceLevel": "Fine"
+                        }
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "annotations": [],
+                "lastPublishTime": "2026-05-03T19:42:40Z"
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/dataflows/df_transform_patients_record')]"
+            ]
+        }
+    ]
+}
