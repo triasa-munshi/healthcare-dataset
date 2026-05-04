@@ -69,11 +69,9 @@ Interactive Dashboards & Reports
 ```
 oftentrain_healthcare_dataset/
 │
-├── data/
-│   └── patients_record.csv        # Raw healthcare dataset
+└── patients_record.csv        # Raw healthcare dataset
 │
-├── sql/
-│   └── create_healthcare_tables.sql  # DDL scripts for Azure SQL DB
+└── create_healthcare_tables.sql  # DDL scripts for Azure SQL DB
 │
 └── README.md
 ```
